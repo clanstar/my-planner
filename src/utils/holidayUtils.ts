@@ -65,43 +65,55 @@ export class HolidayService {
   private static async fetchHolidays(year: number): Promise<Holiday[]> {
     try {
       if (!this.API_KEY) {
-        console.warn('Holiday API key is not configured');
+        console.error('Holiday API key is not configured');
         return [];
       }
 
       const url = new URL('https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo');
-      url.searchParams.append('serviceKey', decodeURIComponent(this.API_KEY));
+      url.searchParams.append('serviceKey', this.API_KEY);
       url.searchParams.append('solYear', year.toString());
       url.searchParams.append('numOfRows', '100');
       url.searchParams.append('_type', 'json');
 
+      console.log('Fetching holidays with URL:', url.toString());
+
       const response = await this.fetchWithRetry(url.toString());
       const responseText = await response.text();
+
+      console.log('Holiday API response:', responseText);
 
       try {
         const data = JSON.parse(responseText) as HolidayApiResponse;
 
-        if (!data.response?.body?.items?.item) {
+        if (data.response?.header?.resultCode !== '00') {
+          console.error('API Error:', data.response?.header?.resultMsg);
           return [];
         }
 
-        const items = Array.isArray(data.response.body.items.item)
-          ? data.response.body.items.item
-          : [data.response.body.items.item];
+        if (!data.response?.body?.items?.item) {
+          console.warn('No holiyday items found in response for year:', year);
+          return [];
+        }
 
-        return items.map(item => ({
+        const items = data.response.body.items.item;
+        const holidayItems = Array.isArray(items) ? items : [items];
+
+        const holidays = holidayItems.map(item => ({
           date: this.formatDate(item.locdate),
           name: item.dateName,
           isHoliday: true
         }));
 
+        console.log('Processed holidays:', holidays);
+        return holidays;
+
       } catch (parseError) {
-        console.warn('Failed to parse holiday API response - continuing without holiday data');
+        console.error('Failed to parse holiday API response:', parseError, 'Response:', responseText);
         return [];
       }
 
     } catch (error) {
-      console.warn('Failed to fetch holidays - continuing without holiday data');
+      console.error('Failed to fetch holidays:', error);
       return [];
     }
   }
@@ -110,12 +122,16 @@ export class HolidayService {
     // 캐시 확인
     const cachedHolidays = this.holidays.get(year);
     if (cachedHolidays) {
+      console.log('Returning cached holidays for year:', year);
       return cachedHolidays;
     }
 
     try {
       const holidays = await this.fetchHolidays(year);
-      this.holidays.set(year, holidays); // 캐시에 저장
+      if (holidays.length > 0) {
+        this.holidays.set(year, holidays);
+        console.log('Cached holidays for year:', year);
+      }
       return holidays;
     } catch (error) {
       console.error(`Error fetching holidays for year ${year}:`, error);
@@ -128,9 +144,16 @@ export class HolidayService {
       const year = date.getFullYear();
       const holidays = await this.getHolidays(year);
       const dateString = date.toISOString().split('T')[0];
-      return holidays.some(holiday => holiday.date === dateString);
+      const isHoliday = holidays.some(holiday => holiday.date === dateString);
+      
+
+      if (isHoliday) {
+        console.log(`Date ${dateString} is a holiday`);
+      }
+      return isHoliday;
+
     } catch (error) {
-      console.warn('Error checking holiday status:', error);
+      console.error('Error checking holiday status:', error);
       return false; // 오류 발생 시 휴일이 아닌 것으로 처리
     }
   }
