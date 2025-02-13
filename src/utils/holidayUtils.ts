@@ -63,6 +63,12 @@ export class HolidayService {
   }
 
   private static async fetchHolidays(year: number): Promise<Holiday[]> {
+
+    console.log('API Key check:', {
+      exists: !!this.API_KEY,
+      key: this.API_KEY ? '키가 존재함' : '키가 없음'
+    });
+    
     try {
       if (!this.API_KEY) {
         console.error('Holiday API key is not configured');
