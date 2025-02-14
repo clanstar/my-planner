@@ -30,6 +30,15 @@ export class HolidayService {
   private static readonly API_KEY = import.meta.env.VITE_HOLIDAY_API_KEY;
   private static readonly MAX_RETRIES = 3;
   private static readonly RETRY_DELAY = 1000; // 1초
+
+  private static getApiKey() {
+    const apiKey = import.meta.env.VITE_HOLIDAY_API_KEY;
+    console.log('API Key Load Check:', {
+      'Exists': !!apiKey,
+      'Key Length': apiKey?.length || 0
+    });
+    return apiKey;
+  }
   
   private static async delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -64,22 +73,13 @@ export class HolidayService {
 
   private static async fetchHolidays(year: number): Promise<Holiday[]> {
 
-    console.log('Detailed Environment Check:', {
-      'Import Meta Type': typeof import.meta?.env,
-      'VITE_HOLIDAY_API_KEY Exists': typeof import.meta?.env?.VITE_HOLIDAY_API_KEY !== 'undefined',
-      'API Key First 10 chars': import.meta?.env?.VITE_HOLIDAY_API_KEY?.substring(0, 10) || 'not found',
-      'Full ENV Keys': Object.keys(import.meta?.env || {})
-    });
-    
+    const apiKey = this.getApiKey();
+
     try {
-      if (!this.API_KEY) {
-        console.error('Holiday API key is not configured. API_KEY:', {
-            'Type': typeof this.API_KEY,
-            'Exists': !!this.API_KEY,
-            'Class Property': typeof HolidayService.API_KEY
-        });
-        return [];
-      }
+      if (!apiKey) {
+          console.error('Holiday API key is not configured');
+          return [];
+        }
 
       const url = new URL('https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo');
       url.searchParams.append('serviceKey', this.API_KEY);
@@ -129,6 +129,7 @@ export class HolidayService {
       return [];
     }
   }
+
 
   public static async getHolidays(year: number): Promise<Holiday[]> {
     // 캐시 확인
