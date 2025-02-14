@@ -64,9 +64,10 @@ export class HolidayService {
 
   private static async fetchHolidays(year: number): Promise<Holiday[]> {
 
-    console.log('API Key check:', {
-      exists: !!this.API_KEY,
-      key: this.API_KEY ? '키가 존재함' : '키가 없음'
+    console.log('Environment check:', {
+      'VITE_HOLIDAY_API_KEY exists': !!import.meta.env.VITE_HOLIDAY_API_KEY,
+      'API_KEY from class': !!this.API_KEY,
+      'Full env': import.meta.env  // 전체 환경 변수 확인 (값은 보이지 않음)
     });
     
     try {
