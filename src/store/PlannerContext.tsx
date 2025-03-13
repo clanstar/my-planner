@@ -16,8 +16,8 @@ const LOCAL_STORAGE_KEYS = {
 } as const;
 
 // 생성된 할 일 청크 처리를 위한 상수
-const CHUNK_SIZE = 100; // 한 번에 처리할 할 일 수
-const CHUNK_DELAY = 10; // 청크 사이의 지연 시간(ms)
+const CHUNK_SIZE = typeof window !== 'undefined' && window.innerWidth < 768 ? 50 : 100; // 한 번에 처리할 할 일 수
+const CHUNK_DELAY = typeof window !== 'undefined' && window.innerWidth < 768 ? 20 : 10; // 청크 사이의 지연 시간(ms)
 const MAX_SYNC_RETRIES = 3; // 최대 동기화 재시도 횟수
 const SYNC_RETRY_DELAY = 60000; // 동기화 재시도 간격(ms) - 1분
 
@@ -312,6 +312,10 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       isProcessingRef.current = true;
       console.log('목표에서 할 일 생성 시작...');
       
+      // 모바일 환경에서 더 작은 청크와 더 긴 지연 시간 사용
+      const chunkSize = typeof window !== 'undefined' && window.innerWidth < 768 ? 30 : CHUNK_SIZE;
+      const chunkDelay = typeof window !== 'undefined' && window.innerWidth < 768 ? 30 : CHUNK_DELAY;
+      
       // 모든 목표의 날짜 범위를 합쳐서 전체 범위 계산
       const today = new Date();
       let minStartDate = today;
@@ -405,13 +409,13 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
         // 일정 시간 후 다음 청크 처리 (UI 반응성 유지)
         setTimeout(() => {
           processChunks(chunks, index + 1);
-        }, CHUNK_DELAY);
+        }, chunkDelay);
       };
       
       // 청크로 나누기
       const chunks: Todo[][] = [];
-      for (let i = 0; i < allGeneratedTodos.length; i += CHUNK_SIZE) {
-        chunks.push(allGeneratedTodos.slice(i, i + CHUNK_SIZE));
+      for (let i = 0; i < allGeneratedTodos.length; i += chunkSize) {
+        chunks.push(allGeneratedTodos.slice(i, i + chunkSize));
       }
       
       // 청크가 없으면 빈 할 일 목록으로 설정

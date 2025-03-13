@@ -41,7 +41,7 @@ export default function MainLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 모바일 메뉴 */}
+      {/* 모바일 헤더 */}
       <div className="lg:hidden">
         <div className="flex items-center justify-between p-4 border-b bg-white">
           <h1 className="text-xl font-semibold">플래너</h1>
@@ -61,9 +61,13 @@ export default function MainLayout() {
             </button>
           </div>
         </div>
-
-        {isMobileMenuOpen && (
-          <nav className="fixed inset-0 z-50 bg-white">
+      </div>
+  
+      {/* 모바일 메뉴 */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileMenuOpen(false)}></div>
+          <div className="absolute top-0 right-0 w-64 h-full bg-white shadow-lg">
             <div className="flex items-center justify-between p-4 border-b">
               <h1 className="text-xl font-semibold">플래너</h1>
               <button
@@ -73,7 +77,22 @@ export default function MainLayout() {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="p-4">
+            
+            {currentUser && (
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <User className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-medium">{currentUser.displayName || '사용자'}</p>
+                    <p className="text-gray-500 text-xs">{currentUser.email}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="overflow-y-auto h-full p-4 pb-20">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -117,14 +136,13 @@ export default function MainLayout() {
                 로그아웃
               </button>
             </div>
-          </nav>
-        )}
-      </div>
-
-      {/* 데스크톱 레이아웃 */}
-      <div className="hidden lg:flex">
-        {/* 사이드바 */}
-        <div className="w-64 min-h-screen bg-white border-r fixed">
+          </div>
+        </div>
+      )}
+  
+      <div className="flex">
+        {/* 데스크톱 사이드바 */}
+        <div className="hidden lg:block w-64 min-h-screen bg-white border-r fixed">
           <div className="p-6">
             <h1 className="text-xl font-semibold">플래너</h1>
             {currentUser && (
@@ -181,11 +199,19 @@ export default function MainLayout() {
             </div>
           </nav>
         </div>
-
-        {/* 메인 콘텐츠 */}
-        <main className="flex-1 ml-64">
-          <div className="py-6 px-8">
-            <h1 className="text-2xl font-semibold mb-6">{getPageTitle()}</h1>
+  
+        {/* 메인 콘텐츠 영역 */}
+        <main className={`flex-1 w-full ${!isMobileMenuOpen ? "lg:ml-64" : ""}`}>
+          {/* 모바일 페이지 제목 */}
+          <div className="lg:hidden py-4 px-6 border-b bg-white">
+            <h1 className="text-lg font-medium">{getPageTitle()}</h1>
+          </div>
+          
+          {/* 페이지 컨텐츠 */}
+          <div className="p-4 lg:p-8">
+            <div className="hidden lg:block mb-6">
+              <h1 className="text-2xl font-semibold">{getPageTitle()}</h1>
+            </div>
             <Outlet />
           </div>
         </main>
