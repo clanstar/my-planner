@@ -1,0 +1,42 @@
+{
+  "root": [
+    ".env",
+    ".gitignore",
+    "eslint.config.js",
+    "index.html",
+    "package-lock.json",
+    "package.json",
+    "postcss.config.js",
+    "project_structure.txt",
+    "README.md",
+    "tailwind.config.js",
+    "tsconfig.app.json",
+    "tsconfig.json",
+    "tsconfig.node.json",
+    "vite.config.ts"
+  ],
+  "directories": {
+    "node_modules": [
+      "package-lock.json",
+      ".bin",
+      ".vite",
+      "@alloc",
+      "@ampproject",
+      "@babel"
+    ],
+    "src": [
+      "main.ts",
+      "App.vue",
+      "components/",
+      "assets/"
+    ],
+    "public": [
+      "index.html",
+      "favicon.ico"
+    ],
+    "dist": [
+      "build.js",
+      "styles.css"
+    ]
+  }
+}

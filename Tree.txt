@@ -1,0 +1,65 @@
+C:\Users\BTS\Desktop\my-planner-main\my-planner-main
+├── .gitignore
+├── eslint.config.js
+├── index.html
+├── package.json # Firebase 패키지 추가 필요
+├── package-lock.json
+├── postcss.config.js
+├── project_structure.json
+├── README.md
+├── tailwind.config.js
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+├── vite.config.ts
+├── Tree.txt
+├── public
+│   └── vite.svg
+├── src
+│   ├── App.css
+│   ├── App.tsx # 라우팅 업데이트 필요
+│   ├── index.css
+│   ├── main.tsx
+│   ├── vite-env.d.ts
+│   ├── assets
+│   │   └── react.svg
+│   ├── components
+│   │   ├── auth # 신규 폴더
+│   │   │   ├── LoginForm.tsx # 신규: 로그인 폼 컴포넌트
+│   │   │   ├── RegisterForm.tsx # 신규: 회원가입 폼 컴포넌트
+│   │   │   ├── PasswordResetForm.tsx # 신규: 비밀번호 재설정 폼
+│   │   │   ├── ProtectedRoute.tsx # 신규: 인증 필요 라우트 보호 컴포넌트
+│   │   │   └── UserProfile.tsx # 신규: 사용자 프로필 컴포넌트
+│   │   └── goals
+│   │       └── GoalForm.tsx
+│   ├── config # 신규 폴더
+│   │   └── firebase.ts # 신규: Firebase 설정 및 초기화
+│   ├── hooks # 신규 폴더
+│   │   ├── useAuth.ts # 신규: 인증 관련 커스텀 훅
+│   │   └── useFirestore.ts # 신규: Firestore 데이터 관련 커스텀 훅
+│   ├── layouts
+│   │   └── MainLayout.tsx # 인증 상태 확인 로직 추가 필요
+│   ├── pages
+│   │   ├── CalendarPage.tsx
+│   │   ├── DashboardPage.tsx
+│   │   ├── DiaryPage.tsx
+│   │   ├── GoalsPage.tsx
+│   │   ├── LoginPage.tsx # 신규: 로그인 페이지
+│   │   ├── RegisterPage.tsx # 신규: 회원가입 페이지
+│   │   ├── PasswordResetPage.tsx # 신규: 비밀번호 재설정 페이지
+│   │   ├── ProfilePage.tsx # 신규: 사용자 프로필 페이지
+│   │   └── TodoPage.tsx
+│   ├── services # 신규 폴더
+│   │   ├── authService.ts # 신규: 인증 관련 서비스 함수
+│   │   └── firestoreService.ts # 신규: Firestore 데이터 처리 서비스
+│   ├── store
+│   │   ├── AuthContext.tsx # 신규: 인증 상태 관리 컨텍스트
+│   │   └── PlannerContext.tsx # 기존 컨텍스트 + Firebase 데이터 연동
+│   ├── types
+│   │   ├── auth.ts # 신규: 인증 관련 타입 정의
+│   │   └── planner.ts
+│   └── utils
+│       ├── authUtils.ts # 신규: 인증 관련 유틸리티 함수
+│       ├── dateUtils.ts
+│       ├── excelUtils.ts
+│       └── holidayUtils.ts
