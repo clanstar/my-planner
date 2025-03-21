@@ -172,26 +172,86 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       console.log('Firestore에서 데이터 로드 중...');
       
       // 각 데이터 타입별로 Firestore에서 병렬 로드
-      const [loadedGoals, loadedTodos, loadedDiaryEntries, loadedCompletedTasks] = await Promise.all([
-        firestore.getGoals(),
-        firestore.getTodos(),
-        firestore.getDiaryEntries(),
-        firestore.getCompletedTasks()
-      ]);
+      // 명시적 타입 지정
+      let loadedGoals: Goal[] = [];
+      let loadedTodos: Todo[] = [];
+      let loadedDiaryEntries: DiaryEntry[] = [];
+      let loadedCompletedTasks: CompletedTask[] = [];
       
-      // 중복 ID 검사 로직 추가
-      const uniqueGoals = removeDuplicateById(loadedGoals);
-      const uniqueTodos = removeDuplicateById(loadedTodos);
-      const uniqueDiaryEntries = removeDuplicateById(loadedDiaryEntries);
-      const uniqueCompletedTasks = removeDuplicateById(loadedCompletedTasks);
+      try {
+        // Promise.all 결과에 명시적 타입 지정
+        const results = await Promise.all([
+          firestore.getGoals(),
+          firestore.getTodos(),
+          firestore.getDiaryEntries(),
+          firestore.getCompletedTasks()
+        ]);
+        
+        // 결과 할당 시 명시적 타입 지정
+        loadedGoals = results[0] as Goal[];
+        loadedTodos = results[1] as Todo[];
+        loadedDiaryEntries = results[2] as DiaryEntry[];
+        loadedCompletedTasks = results[3] as CompletedTask[];
+        
+        console.log('데이터 로드 성공:', { 
+          goals: loadedGoals.length,
+          todos: loadedTodos.length,
+          diary: loadedDiaryEntries.length,
+          completed: loadedCompletedTasks.length
+        });
+        
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+        // 오류 발생 시 각 데이터를 개별적으로 로드 시도
+        try {
+          loadedGoals = await firestore.getGoals();
+        } catch (e) {
+          console.error('목표 로드 실패:', e);
+          loadedGoals = [];
+        }
+        
+        try {
+          loadedTodos = await firestore.getTodos();
+        } catch (e) {
+          console.error('할 일 로드 실패:', e);
+          loadedTodos = [];
+        }
+        
+        try {
+          loadedDiaryEntries = await firestore.getDiaryEntries();
+        } catch (e) {
+          console.error('다이어리 로드 실패:', e);
+          loadedDiaryEntries = [];
+        }
+        
+        try {
+          loadedCompletedTasks = await firestore.getCompletedTasks();
+        } catch (e) {
+          console.error('완료된 작업 로드 실패:', e);
+          loadedCompletedTasks = [];
+        }
+      }
       
-      // 상태 업데이트 및 로컬 스토리지 저장 (배치로 처리)
+      // 중복 ID 검사 및 데이터 유효성 검사
+      const uniqueGoals = validateGoals(removeDuplicateById(loadedGoals || []));
+      const uniqueTodos = validateTodos(removeDuplicateById(loadedTodos || []));
+      const uniqueDiaryEntries = removeDuplicateById(loadedDiaryEntries || []);
+      const uniqueCompletedTasks = validateCompletedTasks(removeDuplicateById(loadedCompletedTasks || []));
+      
+      console.log('검증된 데이터:', { 
+        goals: uniqueGoals.length,
+        todos: uniqueTodos.length,
+        diary: uniqueDiaryEntries.length,
+        completed: uniqueCompletedTasks.length
+      });
+      
+      // 상태 업데이트 및 로컬 스토리지 저장
       setGoals(uniqueGoals);
       setTodos(uniqueTodos);
       setDiaryEntries(uniqueDiaryEntries);
       setCompletedTasks(uniqueCompletedTasks);
       
-      // 한 번에 로컬 스토리지 업데이트
+      // 로컬 스토리지 업데이트
       setLocalStorage(LOCAL_STORAGE_KEYS.GOALS, uniqueGoals);
       setLocalStorage(LOCAL_STORAGE_KEYS.TODOS, uniqueTodos);
       setLocalStorage(LOCAL_STORAGE_KEYS.DIARY, uniqueDiaryEntries);
@@ -199,7 +259,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       
       // 동기화 완료 표시
       setLocalStorage(LOCAL_STORAGE_KEYS.SYNCED_WITH_FIRESTORE, true);
-      setLocalStorage(LOCAL_STORAGE_KEYS.SYNC_RETRY_COUNT, 0); // 재시도 카운터 초기화
+      setLocalStorage(LOCAL_STORAGE_KEYS.SYNC_RETRY_COUNT, 0);
       setSyncedWithFirestore(true);
       setSyncStatus('success');
       
@@ -210,9 +270,7 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       
       handleError(error, '데이터 로드 중 오류가 발생했습니다.');
       
-      // 할당량 초과가 아닌 경우에만 재시도 설정
       if (!handleQuotaExceeded(error)) {
-        // 다음 동기화 재시도 시간 설정
         setLocalStorage(LOCAL_STORAGE_KEYS.LAST_SYNC_ATTEMPT, new Date().getTime());
       }
     } finally {
@@ -221,6 +279,107 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentUser, firestore, handleError, handleQuotaExceeded]);
 
+  // 목표 데이터 유효성 검사
+const validateGoals = (goals: any[]): Goal[] => {
+  return goals.filter(goal => {
+    // 필수 필드 존재 확인
+    if (!goal || !goal.id || !goal.title || !goal.type) {
+      console.warn('유효하지 않은 목표 데이터:', goal);
+      return false;
+    }
+    
+    // 날짜 필드 검증
+    try {
+      if (goal.startDate) new Date(goal.startDate);
+      if (goal.endDate) new Date(goal.endDate);
+      if (goal.createdAt) new Date(goal.createdAt);
+      
+      // 필수 날짜가 없는 경우 기본값 설정
+      if (!goal.startDate) goal.startDate = getCurrentDateString();
+      if (!goal.endDate) goal.endDate = '2025-12-31';
+      if (!goal.createdAt) goal.createdAt = new Date().toISOString();
+      
+      return true;
+    } catch (error) {
+      console.warn('목표 날짜 필드 오류:', goal, error);
+      return false;
+    }
+  }) as Goal[];
+};
+
+// 할 일 데이터 유효성 검사
+const validateTodos = (todos: any[]): Todo[] => {
+  return todos.filter(todo => {
+    // 필수 필드 존재 확인
+    if (!todo || !todo.id || !todo.title) {
+      console.warn('유효하지 않은 할 일 데이터:', todo);
+      return false;
+    }
+    
+    // 날짜 필드 검증
+    try {
+      if (todo.scheduledDate) new Date(todo.scheduledDate);
+      else todo.scheduledDate = getCurrentDateString();
+      
+      if (todo.actualCompletionTime) {
+        try {
+          new Date(todo.actualCompletionTime);
+        } catch (e) {
+          // 유효하지 않은 완료 시간은 제거
+          delete todo.actualCompletionTime;
+        }
+      }
+      
+      // 다른 필드 기본값 설정
+      if (todo.isCompleted === undefined) todo.isCompleted = false;
+      if (todo.isFromGoal === undefined) todo.isFromGoal = false;
+      if (!todo.scheduledTime) todo.scheduledTime = '09:00';
+      
+      return true;
+    } catch (error) {
+      console.warn('할 일 날짜 필드 오류:', todo, error);
+      return false;
+    }
+  }) as Todo[];
+};
+
+// 완료된 작업 데이터 유효성 검사
+const validateCompletedTasks = (tasks: any[]): CompletedTask[] => {
+  return tasks.filter(task => {
+    // 필수 필드 존재 확인
+    if (!task || !task.id || !task.goalId) {
+      console.warn('유효하지 않은 완료 작업 데이터:', task);
+      return false;
+    }
+    
+    // 날짜 필드 검증
+    try {
+      if (task.completedDate) new Date(task.completedDate);
+      else task.completedDate = new Date().toISOString();
+      
+      if (task.scheduledDate) new Date(task.scheduledDate);
+      else task.scheduledDate = getCurrentDateString();
+      
+      // 타입 필드 검증
+      if (!task.type || !['daily', 'weekly', 'monthly'].includes(task.type)) {
+        task.type = 'daily'; // 기본값 설정
+      }
+      
+      return true;
+    } catch (error) {
+      console.warn('완료 작업 날짜 필드 오류:', task, error);
+      return false;
+    }
+  }) as CompletedTask[];
+};
+
+// 현재 날짜 문자열 생성 함수 (YYYY-MM-DD)
+const getCurrentDateString = (): string => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
+  
   // 3. 중복 ID 제거 유틸리티 함수 추가
   function removeDuplicateById<T extends { id: string }>(items: T[]): T[] {
     const seen = new Set<string>();
@@ -241,11 +400,18 @@ export function PlannerProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setSyncStatus('syncing');
       
+      // 데이터 유효성 검사 추가
+      const validatedGoals = validateGoals(goals);
+      const validatedTodos = validateTodos(todos);
+      const validatedDiaryEntries = diaryEntries; // 다이어리는 간단해서 별도 검증 필요 없음
+      const validatedCompletedTasks = validateCompletedTasks(completedTasks);
+      
+      // 검증된 데이터로 마이그레이션
       await firestore.migrateLocalDataToFirestore({
-        goals,
-        todos,
-        diaryEntries,
-        completedTasks
+        goals: validatedGoals,
+        todos: validatedTodos,
+        diaryEntries: validatedDiaryEntries,
+        completedTasks: validatedCompletedTasks
       });
       
       // 동기화 완료 표시
